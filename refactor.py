@@ -1,6 +1,7 @@
 import tkinter as tk
 from dataclasses import dataclass, field
 import argparse
+import time
 
 
 W = 75
@@ -34,6 +35,10 @@ class Graphics(tk.Tk):
             self, width=12, text="Click me 2", command=lambda: read_file(self))
         self.button2.grid(row=2, column=0)
 
+        self.algorithm_button = tk.Button(
+            self, width=12, text="Algorithm", command=lambda: algorithm(self))
+        self.algorithm_button.grid(row=3, column=0)
+
     def draw_node(self, node):
         x = node.x
         y = node.y
@@ -64,9 +69,7 @@ class Graphics(tk.Tk):
 
 def main():
     gui = Graphics()
-
     create_nodes()
-
     gui.mainloop()
 
 
@@ -94,6 +97,7 @@ def read_file(gui):
                         set_value(gui, NODES[y][x], int(f[y][x]))
         except AssertionError:
             print("caught an error")
+    gui.draw_board()
 
 
 def set_value(gui, node, val):
@@ -122,6 +126,47 @@ def set_value(gui, node, val):
             except ValueError:
                 pass
     gui.draw_node(node)
+
+
+# This algorithm performs a sweep of all nodes, checking for any nodes that are
+# either A: the only viable choice for a given number, or B: that has only one
+# possible option.
+def algorithm(gui):
+    for row in NODES:
+        val_options = dict()
+        for node in row:
+            for option in node.options:
+                val_options.setdefault(option, list())
+                val_options[option].append(node)
+        for option, nodes in val_options.items():
+            if len(nodes) == 1 and nodes[0].val == 0:
+                set_value(gui, nodes[0], option)
+    for col in range(len(NODES[0])):
+        val_options = dict()
+        for row in NODES:
+            for option in row[col].options:
+                val_options.setdefault(option, list())
+                val_options[option].append(row[col])
+        for option, nodes in val_options.items():
+            if len(nodes) == 1 and nodes[0].val == 0:
+                set_value(gui, nodes[0], option)
+    for y in range(3):
+        for x in range(3):
+            val_options = dict()
+            for i in range(3):
+                for j in range(3):
+                    node = NODES[y * 3 + i][x * 3 + j]
+                    for option in node.options:
+                        val_options.setdefault(option, list())
+                        val_options[option].append(node)
+            for option, nodes in val_options.items():
+                if len(nodes) == 1 and nodes[0].val == 0:
+                    set_value(gui, nodes[0], option)
+    for row in NODES:
+        for node in row:
+            if len(node.options) == 1 and node.val == 0:
+                set_value(gui, node, node.options[0])
+
 
 
 if __name__ == "__main__":
