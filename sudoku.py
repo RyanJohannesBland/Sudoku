@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import tkinter as tk
+import time
 import random
 import argparse
 
@@ -117,18 +118,46 @@ def main():
     args = parser.parse_args()
 
     ui = UI(file=args.file)
+
+    ui.window.after(1000, algorithm(ui))
     ui.window.mainloop()
 
     algorithm(ui)
 
 
 def algorithm(ui):
-    while True:
-        for row in len(ui.nodes):
+    for row in ui.nodes:
+        val_options = dict()
+        for node in row:
+            for option in node.options:
+                val_options.setdefault(option, list())
+                val_options[option].append(node)
+        for option, nodes in val_options.items():
+            if len(nodes) == 1:
+                ui.set_value(nodes[0], option)
+    for col in range(len(ui.nodes[0])):
+        val_options = dict()
+        for row in ui.nodes:
+            for option in row[col].options:
+                val_options.setdefault(option, list())
+                val_options[option].append(row[col])
+        for option, nodes in val_options.items():
+            if len(nodes) == 1:
+                ui.set_value(nodes[0], option)
+    for y in range(3):
+        for x in range(3):
             val_options = dict()
-            for col in len(ui.nodes[row]):
-                for option in ui.nodes[row][col].options:
-                    pass
+            for i in range(3):
+                for j in range(3):
+                    node = ui.nodes[y * 3 + i][x * 3 + j]
+                    for option in node.options:
+                        val_options.setdefault(option, list())
+                        val_options[option].append(node)
+            for option, nodes in val_options.items():
+                if len(nodes) == 1:
+                    ui.set_value(nodes[0], option)
+    ui.canvas.update()
+    ui.window.after(5000, algorithm(ui))
 
 
 if __name__ == "__main__":
