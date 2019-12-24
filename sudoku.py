@@ -1,12 +1,12 @@
-from dataclasses import dataclass, field
 import tkinter as tk
+from dataclasses import dataclass, field
+import os
 import time
-import random
-import argparse
 
 
 W = 75
 H = 75
+NODES = list()
 
 
 @dataclass
@@ -17,48 +17,31 @@ class Node:
     options: list = field(default_factory=list)
 
 
-class UI:
+class Graphics(tk.Tk):
 
-    def __init__(self, file=None):
-        # Set up window and canvas.
-        self.window = tk.Tk()
-        self.window.title("Sudoku")
-        self.window.geometry("675x675")
-        self.canvas = tk.Canvas(self.window, bg="white", height=675, width=675)
-        self.canvas.pack()
-        # Set up nodes
-        self.nodes = self._create_nodes()
-        if file:
-            self._read_file(file)
-        # Draw initial gameboard
-        self._draw_grid()
-        self._draw_board()
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self.title("Sudoku")
+        self.geometry("800x800")
+        self.configure(background="blue")
 
-    def _create_nodes(self):
-        nodes = list()
-        for y in range(9):
-            row = list()
-            for x in range(9):
-                row.append(Node(y, x, 0, [i for i in range(1,10)]))
-            nodes.append(row)
-        return nodes
+        self.canvas = tk.Canvas(self, bg="white", height=675, width=675)
+        self.canvas.grid(row=0, column=0, columnspan=3)
 
-    def _read_file(self, file):
-        with open(file) as f:
-            f = f.readlines()
+        options = ["1", "2", "3", "4", "5"]
+        self.dropdown_choice = tk.StringVar(self)
+        self.dropdown_choice.set(options[0])
+        self.options_menu = tk.OptionMenu(self, self.dropdown_choice, *options)
+        self.select_button = tk.Button(
+            self, width=12, text="Load file", command=lambda: read_file(self))
+        self.select_button.grid(row=2,column=0)
+        self.options_menu.grid(row=3, column=0)
 
-            try:
-                assert len(f) == 9
-                for y in range(len(f)):
-                    f[y] = f[y].strip()
-                    assert len(f[y]) == 9
-                    for x in range(len(f[y])):
-                        if int(f[y][x]) > 0:
-                            self.set_value(self.nodes[y][x], int(f[y][x]))
-            except AssertionError:
-                print("caught an error")
+        self.algorithm_button = tk.Button(
+            self, width=12, text="Algorithm", command=lambda: algorithm(self))
+        self.algorithm_button.grid(row=2, column=2)
 
-    def _draw_node(self,node):
+    def draw_node(self, node):
         x = node.x
         y = node.y
         self.canvas.create_rectangle(
@@ -74,90 +57,117 @@ class UI:
             self.canvas.create_text(
                 x * W + 35, y * H + 35, text=node.val, font="Times 48")
 
-    def _draw_grid(self):
+    def draw_grid(self):
         for i in range(1, 9):
             self.canvas.create_line(W * i, 0, W * i, H * 9)
             self.canvas.create_line(0, H * i, W * 9, H * i)
 
-    def _draw_board(self):
+    def draw_board(self):
+        self.draw_grid()
         for i in range(9):
             for j in range(9):
-                self._draw_node(self.nodes[i][j])
-
-    def set_value(self, node, val):
-        node.val = val
-        x = node.x
-        y = node.y
-        for n in self.nodes[y]:
-            try:
-                n.options.remove(val)
-                self._draw_node(n)
-            except ValueError:
-                pass
-        for y_val in range(len(self.nodes)):
-            try:
-                self.nodes[y_val][x].options.remove(val)
-                self._draw_node(self.nodes[y_val][x])
-            except ValueError:
-                pass
-        for i in range(3):
-            for j in range(3):
-                try:
-                    x_val = j + x // 3 * 3
-                    y_val = i +  y // 3 * 3
-                    self.nodes[y_val][x_val].options.remove(val)
-                    self._draw_node(self.nodes[y_val][x_val])
-                except ValueError:
-                    pass
-        self._draw_node(node)
+                self.draw_node(NODES[i][j])
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--file", dest="file",default=None)
-    args = parser.parse_args()
-
-    ui = UI(file=args.file)
-
-    ui.window.after(1000, algorithm(ui))
-    ui.window.mainloop()
-
-    algorithm(ui)
+    gui = Graphics()
+    gui.mainloop()
 
 
-def algorithm(ui):
-    for row in ui.nodes:
+def create_nodes():
+    NODES.clear()
+    for y in range(9):
+        row = list()
+        for x in range(9):
+            row.append(Node(y, x, 0, [i for i in range(1,10)]))
+        NODES.append(row)
+
+
+def read_file(gui):
+    create_nodes()
+    file_path = os.path.join(
+        "example_files", f"example_{gui.dropdown_choice.get()}.txt")
+    with open(file_path) as f:
+        f = f.readlines()
+        try:
+            assert len(f) == 9
+            for y in range(len(f)):
+                f[y] = f[y].strip()
+                assert len(f[y]) == 9
+                for x in range(len(f[y])):
+                    if int(f[y][x]) > 0:
+                        set_value(gui, NODES[y][x], int(f[y][x]))
+        except AssertionError:
+            print("caught an error")
+    gui.draw_board()
+
+
+def set_value(gui, node, val):
+    node.val = val
+    x = node.x
+    y = node.y
+    for n in NODES[y]:
+        try:
+            n.options.remove(val)
+            gui.draw_node(n)
+        except ValueError:
+            pass
+    for y_val in range(len(NODES)):
+        try:
+            NODES[y_val][x].options.remove(val)
+            gui.draw_node(NODES[y_val][x])
+        except ValueError:
+            pass
+    for i in range(3):
+        for j in range(3):
+            try:
+                x_val = j + x // 3 * 3
+                y_val = i +  y // 3 * 3
+                NODES[y_val][x_val].options.remove(val)
+                gui.draw_node(NODES[y_val][x_val])
+            except ValueError:
+                pass
+    gui.draw_node(node)
+
+
+# This algorithm performs a sweep of all nodes, checking for any nodes that are
+# either A: the only viable choice for a given number, or B: that has only one
+# possible option.
+def algorithm(gui):
+    for row in NODES:
         val_options = dict()
         for node in row:
             for option in node.options:
                 val_options.setdefault(option, list())
                 val_options[option].append(node)
         for option, nodes in val_options.items():
-            if len(nodes) == 1:
-                ui.set_value(nodes[0], option)
-    for col in range(len(ui.nodes[0])):
+            if len(nodes) == 1 and nodes[0].val == 0:
+                set_value(gui, nodes[0], option)
+    for col in range(len(NODES[0])):
         val_options = dict()
-        for row in ui.nodes:
+        for row in NODES:
             for option in row[col].options:
                 val_options.setdefault(option, list())
                 val_options[option].append(row[col])
         for option, nodes in val_options.items():
-            if len(nodes) == 1:
-                ui.set_value(nodes[0], option)
+            if len(nodes) == 1 and nodes[0].val == 0:
+                set_value(gui, nodes[0], option)
     for y in range(3):
         for x in range(3):
             val_options = dict()
             for i in range(3):
                 for j in range(3):
-                    node = ui.nodes[y * 3 + i][x * 3 + j]
+                    node = NODES[y * 3 + i][x * 3 + j]
                     for option in node.options:
                         val_options.setdefault(option, list())
                         val_options[option].append(node)
             for option, nodes in val_options.items():
-                if len(nodes) == 1:
-                    ui.set_value(nodes[0], option)
-    ui.canvas.update()
-    ui.window.after(5000, algorithm(ui))
+                if len(nodes) == 1 and nodes[0].val == 0:
+                    set_value(gui, nodes[0], option)
+    for row in NODES:
+        for node in row:
+            if len(node.options) == 1 and node.val == 0:
+                set_value(gui, node, node.options[0])
 
 
 if __name__ == "__main__":

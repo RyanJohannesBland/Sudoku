@@ -1,6 +1,6 @@
 import tkinter as tk
 from dataclasses import dataclass, field
-import argparse
+import os
 import time
 
 
@@ -22,22 +22,24 @@ class Graphics(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.title("Sudoku")
-        self.geometry("675x775")
+        self.geometry("800x800")
+        self.configure(background="blue")
 
         self.canvas = tk.Canvas(self, bg="white", height=675, width=675)
-        self.canvas.grid(row=0, column=0)
+        self.canvas.grid(row=0, column=0, columnspan=3)
 
-        self.button = tk.Button(
-            self, width=12, text="Click me", command=self.draw_board)
-        self.button.grid(row=1, column=0)
-
-        self.button2 = tk.Button(
-            self, width=12, text="Click me 2", command=lambda: read_file(self))
-        self.button2.grid(row=2, column=0)
+        options = ["1", "2", "3", "4", "5"]
+        self.dropdown_choice = tk.StringVar(self)
+        self.dropdown_choice.set(options[0])
+        self.options_menu = tk.OptionMenu(self, self.dropdown_choice, *options)
+        self.select_button = tk.Button(
+            self, width=12, text="Load file", command=lambda: read_file(self))
+        self.select_button.grid(row=2,column=0)
+        self.options_menu.grid(row=3, column=0)
 
         self.algorithm_button = tk.Button(
             self, width=12, text="Algorithm", command=lambda: algorithm(self))
-        self.algorithm_button.grid(row=3, column=0)
+        self.algorithm_button.grid(row=2, column=2)
 
     def draw_node(self, node):
         x = node.x
@@ -69,11 +71,11 @@ class Graphics(tk.Tk):
 
 def main():
     gui = Graphics()
-    create_nodes()
     gui.mainloop()
 
 
 def create_nodes():
+    NODES.clear()
     for y in range(9):
         row = list()
         for x in range(9):
@@ -82,10 +84,10 @@ def create_nodes():
 
 
 def read_file(gui):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--file", dest="file", default=None)
-    args = parser.parse_args()
-    with open(args.file) as f:
+    create_nodes()
+    file_path = os.path.join(
+        "example_files", f"example_{gui.dropdown_choice.get()}.txt")
+    with open(file_path) as f:
         f = f.readlines()
         try:
             assert len(f) == 9
